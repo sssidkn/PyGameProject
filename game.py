@@ -1,7 +1,7 @@
 from GameSprites import *
 
 PAUSED = False
-
+pygame.init()
 pygame.display.set_caption("Cats")
 clock = pygame.time.Clock()
 
@@ -10,13 +10,33 @@ pygame.mixer.music.load('data/music.mp3')
 pygame.mixer.music.play()
 click = pygame.mixer.Sound('data/click.mp3')
 
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+
+
+def load_image(name):
+    fullname = os.path.join('data', name)
+    if not os.path.isfile(fullname):
+        print(f"Файл с изображением '{fullname}' не найден")
+        sys.exit()
+    image = pygame.image.load(fullname)
+    return image
+
+
+def terminate():
+    pygame.quit()
+    sys.exit()
+
+
+def f_return():
+    return
+
+
 
 def start_screen():
     buttons = [TextButton(655, 166, 'Start', 100, f_return), TextButton(655, 328, 'Rules', 100, rules_screen),
                TextButton(655, 419, 'Settings', 100, settings_screen)]
     fon = pygame.transform.scale(load_image('fon.png'), (WIDTH, HEIGHT))
     screen.blit(fon, (0, 0))
-    font = pygame.font.Font('data/StayPixelRegular.ttf', 100)
     for button in buttons:
         button.draw_button()
     while True:

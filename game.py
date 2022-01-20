@@ -1,6 +1,7 @@
 from GameSprites import *
 
 PAUSED = False
+RUN = False
 pygame.init()
 pygame.display.set_caption("Cats")
 clock = pygame.time.Clock()
@@ -22,6 +23,12 @@ def load_image(name):
     return image
 
 
+def f_continue():
+    global PAUSED
+    PAUSED = not PAUSED
+    return
+
+
 def terminate():
     pygame.quit()
     sys.exit()
@@ -31,8 +38,10 @@ def f_return():
     return
 
 
-
 def start_screen():
+    global PAUSED, RUN
+    PAUSED = False
+    RUN = False
     buttons = [TextButton(655, 166, 'Start', 100, f_return), TextButton(655, 328, 'Rules', 100, rules_screen),
                TextButton(655, 419, 'Settings', 100, settings_screen)]
     fon = pygame.transform.scale(load_image('fon.png'), (WIDTH, HEIGHT))
@@ -116,6 +125,7 @@ def settings_screen():
             if event.type == pygame.MOUSEBUTTONUP:
                 x, y = event.pos
                 if button.is_under(x, y):
+                    click.play()
                     button.func()
                     return
             if event.type == pygame.MOUSEMOTION:
@@ -126,27 +136,34 @@ def settings_screen():
 
 
 def pause_menu():
-    fon = pygame.transform.scale(load_image('menu.png'), (WIDTH, HEIGHT))
-    screen.blit(fon, (WIDTH // 2, HEIGHT // 2))
+    global PAUSED
+    fon = pygame.transform.scale(load_image('menu.png'), (500, 500))
+    screen.blit(fon, (WIDTH // 2 - 250, HEIGHT // 2 - 250))
 
-    button = TextButton(0, 0, 'Back', 100, start_screen())
-    button.draw_button()
+    continue_btn = TextButton(WIDTH // 2 - 170, HEIGHT // 2, 'Continue', 100, f_continue)
+    continue_btn.draw_button()
+    settings_btn = TextButton(WIDTH // 2 - 170, HEIGHT // 2 - 100, 'Menu', 100, start_screen)
+    settings_btn.draw_button()
+    buttons = [continue_btn, settings_btn]
     while True:
-        global PAUSED
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
             if event.type == pygame.MOUSEBUTTONUP:
                 x, y = event.pos
-                if button.is_under(x, y):
-                    button.func()
-                    return
+                for button in buttons:
+                    if button.is_under(x, y):
+                        click.play()
+                        button.func()
+                        return
             if event.type == pygame.MOUSEMOTION:
                 x, y = event.pos
-                button.update(x, y)
+                for button in buttons:
+                    button.update(x, y)
             keystate = pygame.key.get_pressed()
             if keystate[pygame.K_ESCAPE]:
                 PAUSED = not PAUSED
+                return
         pygame.display.flip()
         clock.tick(FPS)
 
@@ -160,16 +177,16 @@ start_screen()
 
 
 def game():
-    global PAUSED
+    global PAUSED, RUN
     fon = pygame.transform.scale(load_image('background.jpg'), (WIDTH, HEIGHT))
     screen.blit(fon, (0, 0))
-    running = True
-    while running:
+    RUN = True
+    while RUN:
         clock.tick(FPS)
         for event in pygame.event.get():
+            keystate = pygame.key.get_pressed()
             if event.type == pygame.QUIT:
                 terminate()
-            keystate = pygame.key.get_pressed()
             if keystate[pygame.K_ESCAPE]:
                 pause_menu()
                 PAUSED = not PAUSED

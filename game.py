@@ -11,7 +11,8 @@ def load_image(name):
     image = pygame.image.load(fullname)
     return image
 
-
+#TODO: Полноэкранный режим
+#TODO: Счет
 WIDTH = 1280
 HEIGHT = 720
 FPS = 60

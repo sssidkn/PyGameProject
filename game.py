@@ -2,6 +2,12 @@ import pygame
 import os
 import sys
 
+RUN = True
+FPS = 60
+K_VOLUME = 0.5
+TITLE_WIDTH = TITLE_HEIGHT = 50
+GRAVITI = 0.5
+
 
 def load_image(name):
     fullname = os.path.join('Data', name)
@@ -12,15 +18,9 @@ def load_image(name):
     return image
 
 
-RUN = True
-WIDTH = 1280
-HEIGHT = 720
-FPS = 60
-TITLE_WIDTH = TITLE_HEIGHT = 50
-
 player = None
 all_sprites = pygame.sprite.Group()
-tiles_group = pygame.sprite.Group()
+platforms_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 
 pygame.init()
@@ -32,7 +32,8 @@ pygame.mixer.music.load('data/music.mp3')
 pygame.mixer.music.play()
 click = pygame.mixer.Sound('data/click.mp3')
 
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+WIDTH, HEIGHT = screen.get_width(), screen.get_height()
 
 tile_images = {
     'wall': load_image('snow.png')
@@ -69,6 +70,18 @@ def f_exit():
     global RUN
     RUN = False
     return
+
+
+def plus_volume():
+    global K_VOLUME
+    K_VOLUME = min(1, K_VOLUME + 0.1)
+    pygame.mixer.music.set_volume(K_VOLUME)
+
+
+def minus_volume():
+    global K_VOLUME
+    K_VOLUME = max(0, K_VOLUME + 0.1)
+    pygame.mixer.music.set_volume(K_VOLUME)
 
 
 def generate_level(level):
@@ -123,52 +136,51 @@ class Player(pygame.sprite.Sprite):
         # self.image = player_image
         self.rect = self.image.get_rect().move(
             TITLE_WIDTH * pos_x + 15, TITLE_HEIGHT * pos_y - TITLE_HEIGHT)
+        self.onGround = False
+
+    def collide(self):
+        global platforms_group
+        for platform in platforms_group:
+            if pygame.sprite.collide_rect(self, platform):
+                if self.speedx > 0:
+                    self.rect.right = platform.rect.left
+                if self.speedx < 0:
+                    self.rect.left = platform.rect.right
+                if self.speedy > 0:
+                    self.rect.bottom = platform.rect.top
+                    self.onGround = True
+                    self.speedy = 0
+                if self.speedy < 0:
+                    self.rect.top = platform.rect.bottom
+                    self.speedy = 0
 
     def jump(self):
-        pass
-
-    def is_jump(self):
-        pass
-
-    def check_col(self, col):
-        if col:
-            print(self.rect.right, col.rect.left)
-            if col.rect.right >= self.rect.left:
-                return 'col_left'
-            if self.rect.right >= col.rect.left:
-                return 'col_right'
-            if col.rect.top <= self.rect.bottom:
-                return 'col_bottom'
-            if col.rect.bottom >= self.rect.top:
-                return 'col_top'
-        return 'OK'
+        if self.onGround:
+            self.onGround = False
 
     def update(self):
+        global platforms_group
         self.speedx = 0
         self.speedy = 0
         keystate = pygame.key.get_pressed()
-        col = pygame.sprite.spritecollideany(self, tiles_group)
-        if keystate[pygame.K_LEFT] and self.check_col(col) != 'col_right':
+        if keystate[pygame.K_LEFT] or keystate[pygame.K_a]:
             self.speedx = -8
             # self.image = load_image('lplayer.png')
-        if keystate[pygame.K_RIGHT] and self.check_col(col) != 'col_left':
+        elif keystate[pygame.K_RIGHT] or keystate[pygame.K_d]:
             self.speedx = 8
             # self.image = load_image('rplayer.png')
-        if keystate[pygame.K_UP] and self.check_col(col) != 'col_bottom':
-            self.speedy = -8
-        if keystate[pygame.K_DOWN] and self.check_col(col) != 'col_top':
-            self.speedy = 8
+        elif keystate[pygame.K_SPACE]:
+            self.jump()
+
         self.rect.x += self.speedx
+        self.collide()
         self.rect.y += self.speedy
-        if self.rect.right > WIDTH:
-            self.rect.right = WIDTH
-        if self.rect.left < 0:
-            self.rect.left = 0
+        self.collide()
 
 
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
-        super().__init__(tiles_group, all_sprites)
+        super().__init__(platforms_group, all_sprites)
         # self.image = tile_images[tile_type]
         self.image = pygame.Surface((TITLE_HEIGHT, TITLE_WIDTH))
         self.image.fill('green')
@@ -181,12 +193,10 @@ class Camera:
         self.dx = 0
         self.dy = 0
 
-    # сдвинуть объект obj на смещение камеры
     def apply(self, obj):
         obj.rect.x += self.dx
         obj.rect.y += self.dy
 
-    # позиционировать камеру на объекте target
     def update(self, target):
         self.dx = -(target.rect.x + target.rect.w // 2 - WIDTH // 2)
         self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
@@ -197,8 +207,10 @@ def start_screen():
     PAUSED = False
     RUN = False
     all_sprites.empty()
-    buttons = [TextButton(655, 166, 'Start', 100, game), TextButton(655, 328, 'Rules', 100, rules_screen),
-               TextButton(655, 419, 'Settings', 100, settings_screen)]
+    buttons = [TextButton(WIDTH / 2.15, HEIGHT / 5.2, 'Start', 120, game),
+               TextButton(WIDTH / 2.15, HEIGHT / 3.2, 'Rules', 120, rules_screen),
+               TextButton(WIDTH / 2.15, HEIGHT / 2.3, 'Settings', 120, settings_screen),
+               TextButton(WIDTH / 2.15, HEIGHT / 1.8, 'Exit', 130, terminate)]
     fon = pygame.transform.scale(load_image('fon.png'), (WIDTH, HEIGHT))
     screen.blit(fon, (0, 0))
     for button in buttons:
@@ -266,22 +278,24 @@ def rules_screen():
 def settings_screen():
     fon = pygame.transform.scale(load_image('settings.jpg'), (WIDTH, HEIGHT))
     screen.blit(fon, (0, 0))
-
-    button = TextButton(0, 0, 'Back', 100, start_screen)
-    button.draw_button()
+    buttons = [TextButton(0, 0, 'Back', 120, start_screen),
+               TextButton(WIDTH // 2, HEIGHT // 2, '<-', 100, plus_volume),
+               TextButton(WIDTH // 2 + 100, HEIGHT // 2, '<-', 100, minus_volume)]
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
             if event.type == pygame.MOUSEBUTTONUP:
                 x, y = event.pos
-                if button.is_under(x, y):
-                    click.play()
-                    button.func()
-                    return
+                for button in buttons:
+                    if button.is_under(x, y):
+                        click.play()
+                        button.func()
+                        return
             if event.type == pygame.MOUSEMOTION:
                 x, y = event.pos
-                button.update(x, y)
+                for button in buttons:
+                    button.update(x, y)
         pygame.display.flip()
         clock.tick(FPS)
 

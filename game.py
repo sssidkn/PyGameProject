@@ -29,13 +29,6 @@ def load_image(name):
     image = pygame.image.load(fullname)
     return image
 
-
-player = None
-all_sprites = pygame.sprite.Group()
-platforms_group = pygame.sprite.Group()
-player_group = pygame.sprite.Group()
-items_group = pygame.sprite.Group()
-
 pygame.init()
 pygame.display.set_caption("Game")
 clock = pygame.time.Clock()
